@@ -1,0 +1,78 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:cad.etzhayyim.com",
+  "convoSystemPrompt": "You are etzhayyim-wasm-cad agent. Cad — AI Agent for browser-based CAD viewing, review, anchored comments, and export. Respond helpfully in the user's language.",
+  "duties": [
+    "勤労の義務"
+  ],
+  "governance": {
+    "raci": "responsible",
+    "classification": "internal",
+    "complianceFrameworks": [
+      "cad-policy"
+    ]
+  },
+  "kpi": [
+    "credits の獲得"
+  ],
+  "name": "etzhayyim-wasm-cad",
+  "nanoid": "cd4dview",
+  "performerType": "service",
+  "pool": {},
+  "profile": {
+    "agentType": "autonomous",
+    "capabilities": [
+      "cad-import",
+      "cad-scene-projection",
+      "cad-anchored-comments",
+      "cad-export"
+    ],
+    "description": "Cad — AI Agent for browser-based CAD viewing, review, anchored comments, and export",
+    "displayName": "Cad",
+    "isBot": true,
+    "operator": "etzhayyim.com"
+  },
+  "project": "cad",
+  "routes": [
+    {
+      "host": "cad.etzhayyim.com",
+      "paths": [
+        "/"
+      ],
+      "tls": true
+    }
+  ],
+  "runtimeType": "worker",
+  "serviceBindings": [
+    {
+      "binding": "CAD_JOB",
+      "service": "cad-job",
+      "purpose": "Heavy CAD parse / tessellation / export — CF Container (lite/standard) at cad-job.etzhayyim.com. ADR 2604241500."
+    }
+  ],
+  "space": {
+    "channels": [
+      {
+        "default": true,
+        "kind": "public",
+        "name": "cd4dview-feed"
+      }
+    ],
+    "joinRule": "public",
+    "name": "Cad"
+  },
+  "triggers": {
+    "subscribeRepos": {
+      "collections": [
+        "app.bsky.feed.like",
+        "app.bsky.feed.post",
+        "app.bsky.feed.repost",
+        "app.bsky.graph.follow",
+        "com.etzhayyim.apps.cad.model",
+        "com.etzhayyim.apps.cad.revision",
+        "com.etzhayyim.apps.cad.comment"
+      ]
+    }
+  },
+  "uiType": "appview"
+}
