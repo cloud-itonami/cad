@@ -1,7 +1,9 @@
 # operator quickstart — cad
 
 **この文書の手順はすべて実際に踏んである。** 実行結果は実測値で、期待値ではない。
-測ったのは 2026-08-12、macOS 15（darwin 25.3.0 / arm64）、Node v26.3.0 / npm 11.12.1。
+§0〜2 を測ったのは 2026-08-12（macOS 15、darwin 25.3.0 / arm64、Node v26.3.0 /
+npm 11.12.1）。§3〜4（cljs 移行、Svelte → ClojureScript）は 2026-08-26 に
+同マシンで測り直した。
 
 踏めなかった手順は「踏めない」と書いてあり、手順として並べていない。
 
@@ -132,12 +134,61 @@ npx vitest run          # ← 緑に戻ること
 
 ---
 
-## 3. 静的ビューア（`v2.htm`）を配る
+## 3. `appview/etzhayyim-wasm-cad-cd4dview/cljs/` を動かす（2026-08-26、Svelte → ClojureScript 移行）
 
-実際に動くビューア面はここだけ。ビルド不要 —— wasm がチェックイン済み。
+旧 `svelte/`（Svelte 5 + Vite）は削除し、shadow-cljs + reagent + re-frame +
+jp-go-dds の scaffold に置き換えた（workspace 標準スタック、ADR-2608080100）。
+`src/cad/app.cljs` は旧 `App.svelte`（32 行のスキャフォールド）の忠実な移植で、
+見出し 1 行 + 状態文 1 行のまま、CAD ビューア機能は増えていない。
 
 ```bash
-cd appview/etzhayyim-wasm-cad-cd4dview/svelte/static
+cd appview/etzhayyim-wasm-cad-cd4dview/cljs
+npm install
+```
+
+**実測**: `added 129 packages, and audited 130 packages in 10s`。
+
+### build
+
+```bash
+npx shadow-cljs compile app
+```
+
+**実測**: `[:app] Build completed. (111 files, 110 compiled, 0 warnings, 25.12s)`
+（`public/js/app.js` を出力。`public/index.html` は `jp-go-dds.page/->page` で
+SSR 生成した shell で、`js/app.js` を相対パスで読む）。
+
+### test
+
+```bash
+npx shadow-cljs compile test
+node out/tests.js
+```
+
+**実測**: `[:test] Build completed. (112 files, 111 compiled, 0 warnings, 20.39s)`
+→ `Ran 4 tests containing 6 assertions. 0 failures, 0 errors.`
+（`test/cad/app_test.cljs` が re-frame の `:initialize-db` / `:heading` /
+`:message` を実際に検査する — 恒真 placeholder ではない）。`re-frame: Subscribe
+was called outside of a reactive context.` という警告が出るが、これは
+`cljs.test` の中で `rf/subscribe` を reagent の render 外から直接 deref して
+いるための re-frame 自身の情報警告で、テスト結果には影響しない。
+
+このマシンは高負荷で並行 agent が走るため、重いビルドは
+`node <superproject root>/scripts/resource-guard.mjs run build -- <command>`
+経由にすること（ロック保持中は exit 2 を返す。失敗ではなく「今は空いていない」
+という意味なので待って再試行する）。
+
+---
+
+## 4. 静的ビューア（`v2.htm`）を配る
+
+実際に動くビューア面はここだけ。ビルド不要 —— wasm がチェックイン済み。
+**2026-08-26 の Svelte → ClojureScript 移行で `svelte/static/` から
+`appview/etzhayyim-wasm-cad-cd4dview/static/` へ移設した**（Svelte の削除に
+巻き込まれないよう先に退避した。中身は無変更）。
+
+```bash
+cd appview/etzhayyim-wasm-cad-cd4dview/static
 python3 -m http.server 8787
 ```
 
@@ -162,44 +213,24 @@ CAD ビューアが立ち上がる想定。操作は HUD の下部に出る: dra
 
 ---
 
-## 4. 踏めない手順 —— やろうとして止まった場所
-
-### `svelte/` の UI はこのリポジトリ単体でインストールできない
-
-```bash
-cd appview/etzhayyim-wasm-cad-cd4dview/svelte
-npm install
-```
-
-**実測**:
-
-```
-npm error code EUNSUPPORTEDPROTOCOL
-npm error Unsupported URL Type "workspace:": workspace:*
-```
-
-`package.json` の `"@etzhayyim/design-system": "workspace:*"` が原因。このリポジトリは
-npm/pnpm workspace のルートを持たないので、`workspace:` プロトコルを解決できない。
-依存先の実体は **`kotoba-lang/svelte-design-system`**（`package.json` の `name` が
-`@etzhayyim/design-system`）。
-
-直すには workspace を張るか git 依存に書き換えるかだが、**どちらにするかは未決**
-（`docs/adr/0001` の open question を参照）。そして `src/App.svelte` は 32 行の
-スキャフォールドなので、**今これを直しても得られる UI は無い。**
+## 5. 踏めない手順 —— やろうとして止まった場所
 
 ### `appview/` の Worker はビルド対象が定義されていない
 
 `appview/etzhayyim-wasm-cad-cd4dview/src/app.ts` は
 `@etzhayyim/kotodama-host-sdk` を import するが、`appview/` 直下に `package.json` も
 `wrangler.toml` も無い。**このリポジトリ単体では依存解決もビルドもデプロイもできない。**
-デプロイ経路は kotodama host 側にあり、ここには無い。
+デプロイ経路は kotodama host 側にあり、ここには無い。**これは backend であり、
+2026-08-26 の frontend 移行の対象外**（Worker は無変更）。
 
 ---
 
-## 5. 後片付け
+## 6. 後片付け
 
-`npm install` は `kotoba/node_modules/` と `kotoba/package-lock.json` を作る。
-どちらも `.gitignore` 済みなので、quickstart を踏んでもツリーは汚れない
+`npm install` は `kotoba/node_modules/` と
+`appview/etzhayyim-wasm-cad-cd4dview/cljs/node_modules/`（+ 各 `package-lock.json`、
+cljs 側は `.shadow-cljs/` `.cpcache/` `out/` `public/js/` も）を作る。すべて
+`.gitignore` 済みなので、quickstart を踏んでもツリーは汚れない
 （`git status --porcelain` が空のままであることを確認済み）。
 
 ---
@@ -208,11 +239,15 @@ npm/pnpm workspace のルートを持たないので、`workspace:` プロトコ
 
 数字が合わなくなったら、まずここを確かめる:
 
-- **`npm install` が 3 分より大幅に速い/遅い** — git 依存 8 本の clone が支配的なので、
-  ネットワークと npm キャッシュの状態で動く。3〜7 分の幅を実測している。異常ではない。
-- **`vitest: command not found` / `src/registry.ts` に TS7006 の山** — ソースではなく
-  `node_modules` が不完全。§1 の「install が途中で死んだときの直し方」へ。
-- **テスト数が 4 でない** — `test/cad.test.ts` は 1 ファイル・4 ケース。増減していたら
-  この文書のほうが古い。
-- **`npm install` が `EUNSUPPORTEDPROTOCOL` で落ちる** — `kotoba/` ではなく
-  `svelte/` に居る。§4 のとおりそれは既知で、`kotoba/` に戻ること。
+- **`npm install` が 3 分より大幅に速い/遅い**（`kotoba/`）— git 依存 8 本の clone が
+  支配的なので、ネットワークと npm キャッシュの状態で動く。3〜7 分の幅を実測している。
+  異常ではない。
+- **`vitest: command not found` / `src/registry.ts` に TS7006 の山**（`kotoba/`）—
+  ソースではなく `node_modules` が不完全。§1 の「install が途中で死んだときの直し方」へ。
+- **テスト数が 4 でない**（`kotoba/`）— `test/cad.test.ts` は 1 ファイル・4 ケース。
+  増減していたらこの文書のほうが古い。
+- **`cljs/` のテスト数が 4 でない、または assertion 数が 6 でない** — `test/cad/
+  app_test.cljs` は 1 ファイル・4 ケース・6 assertion。増減していたらこの文書の
+  ほうが古い。
+- **`EUNSUPPORTEDPROTOCOL` を探してこの文書にたどり着いた** — それは旧 `svelte/`
+  （2026-08-26 に削除済み）の既知の症状だった。現行 `cljs/` にこの依存は無い。
