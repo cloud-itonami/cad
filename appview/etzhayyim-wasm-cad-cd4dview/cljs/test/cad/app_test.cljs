@@ -1,0 +1,32 @@
+(ns cad.app-test
+  (:require [cljs.test :refer [deftest is testing use-fixtures]]
+            [re-frame.core :as rf]
+            [re-frame.db :as rf-db]
+            [cad.app :as app]))
+
+(use-fixtures :each
+  {:before (fn [] (rf/clear-subscription-cache!) (reset! rf-db/app-db {}))})
+
+(deftest initialize-db-sets-defaults
+  (testing ":initialize-db populates the default heading and message"
+    (rf/dispatch-sync [:initialize-db])
+    (is (= app/default-db @rf-db/app-db))
+    (is (= "etzhayyim-wasm-cad-cd4dview" @(rf/subscribe [:heading])))
+    (is (= "ClojureScript entry scaffold after Svelte migration."
+           @(rf/subscribe [:message])))))
+
+(deftest heading-sub-reflects-db
+  (testing ":heading subscription reads whatever is in the db, not a fixed value"
+    (reset! rf-db/app-db {:heading "違う見出し" :message "x"})
+    (is (= "違う見出し" @(rf/subscribe [:heading])))))
+
+(deftest message-sub-reflects-db
+  (testing ":message subscription reads whatever is in the db, not a fixed value"
+    (reset! rf-db/app-db {:heading "h" :message "custom status text"})
+    (is (= "custom status text" @(rf/subscribe [:message])))))
+
+(deftest initialize-db-overwrites-prior-state
+  (testing ":initialize-db resets to defaults even if the db already had other data"
+    (reset! rf-db/app-db {:heading "stale" :message "stale" :unrelated 42})
+    (rf/dispatch-sync [:initialize-db])
+    (is (= app/default-db @rf-db/app-db))))

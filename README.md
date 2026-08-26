@@ -19,7 +19,7 @@
 | 面 | 中身 | 今日の状態 |
 |---|---|---|
 | **`kotoba/`** | `@etzhayyim/cad-kotoba` — model / revision / comment の登録・照会・coverage。AT PDS レコードに対する純粋な TypeScript ライブラリ | **ビルド・テストが通る**（実測、下記 quickstart） |
-| **`appview/etzhayyim-wasm-cad-cd4dview/`** | Cloudflare Worker（`src/app.ts`、`@etzhayyim/kotodama-host-sdk`）+ Svelte ビューア + 事前ビルド済み wasm ビューア | **このリポジトリ単体ではビルドできない**（下記） |
+| **`appview/etzhayyim-wasm-cad-cd4dview/`** | Cloudflare Worker（`src/app.ts`、`@etzhayyim/kotodama-host-sdk`）+ ClojureScript scaffold（`cljs/`、shadow-cljs + reagent + re-frame + jp-go-dds）+ 事前ビルド済み wasm ビューア（`static/`） | **`cljs/` はビルド・テストが通る。Worker（`src/app.ts`）は依存解決対象が定義されておらず単体ビルド不可**（下記） |
 
 `260320-cad-kotodamaapp-design.md`（15 KB）が詳細設計の正本。CommandService /
 QueryService の分割、`GetRevisionScene` の応答契約、blob 層と graph 層の境界、
@@ -41,20 +41,25 @@ Phase 1 のレジストリ部分**である。
 
 ### `appview/` の境界（動かす前に読むこと）
 
-- **`svelte/` は単体で `npm install` できない。** `package.json` が
-  `"@etzhayyim/design-system": "workspace:*"` を要求するが、このリポジトリは
-  npm workspace のルートを持たない。実測すると
-  `EUNSUPPORTEDPROTOCOL Unsupported URL Type "workspace:"` で止まる。
-  依存先の実体は **`kotoba-lang/svelte-design-system`**（`package.json` の `name` が
-  `@etzhayyim/design-system`）。workspace を張り直すか、git 依存に書き換えるかは未決。
-- **`svelte/src/App.svelte` は 32 行のスキャフォールド**（"Vite entry scaffold after
-  SvelteKit cleanup." と自分で書いている）。ビューアの実装ではない。
-- **`svelte/static/v2.htm` + `static/v2/` が実際に動く唯一のビューア面。**
-  ただしこれは `kotoba-lang/kami-app-cad` を wasm-bindgen でビルドした**成果物が
-  チェックインされているだけ**で、ソースもビルドレシピもこのリポジトリには無い。
-  作り直すには上流の repo に行く必要がある。
+- **2026-08-26 に `svelte/` を `cljs/` へ移行した**（Svelte 5 + Vite → shadow-cljs +
+  reagent + re-frame + jp-go-dds、workspace 標準スタックへの揃え、ADR-2608080100）。
+  `cljs/src/cad/app.cljs` は旧 `App.svelte`（32 行のスキャフォールド、"Vite entry
+  scaffold after SvelteKit cleanup." と自分で書いていた）の**忠実な移植**——
+  見出し 1 行 + 状態文 1 行のままで、CAD ビューア機能は増やしていない。旧 svelte の
+  `"@etzhayyim/design-system": "workspace:*"` 未解決依存（`kotoba-lang/
+  svelte-design-system` が実体、npm workspace 未設定で `EUNSUPPORTEDPROTOCOL`）は
+  UI をこのワークスペースの基本 design system（jp-go-dds）に置き換えたことで解消した。
+  手順は `docs/operator-quickstart.md`。
+- **`static/v2.htm` + `static/v2/` が実際に動く唯一のビューア面。** これは
+  `kotoba-lang/kami-app-cad` を wasm-bindgen でビルドした**成果物がチェックイン
+  されているだけ**で、ソースもビルドレシピもこのリポジトリには無い。作り直すには
+  上流の repo に行く必要がある。この cljs 移行より前は `svelte/static/` 配下に
+  あった（Svelte アプリの静的アセットディレクトリに間借りしていただけで、Svelte
+  ソースの一部ではない）。移行時に `appview/etzhayyim-wasm-cad-cd4dview/static/`
+  へ移設し、Svelte の削除に巻き込まれないようにした。
 - `src/app.ts` は Worker のエントリだが、`appview/` 直下に `package.json` が無いので
-  このリポジトリ単体では依存解決もビルドもできない。
+  このリポジトリ単体では依存解決もビルドもできない（フロントエンドの移行対象外
+  ——これは backend で、今回は触っていない）。
 
 ## 3D の権威 — Threlte はこのリポジトリの独断では使えない
 
@@ -68,9 +73,11 @@ Svelte ラッパ）。例外には対象・期間・理由・撤去条件を書�
 **このリポジトリにその ADR は無い。**
 
 現状は偶然そちら側に揃っている —— 実際に動くビューアは Threlte ではなく
-`kami-app-cad` の wasm だからである。**新しいビューア実装を書くときは、この
-リポジトリ内 `CLAUDE.md` の Threlte 記述を根拠にしない。** superproject 側が勝つ。
-詳細は `docs/adr/0001-what-this-repo-is-authoritative-for.md`。
+`kami-app-cad` の wasm だからである（2026-08-26 の cljs 移行で `svelte/` 自体が
+消えたので、なおさら Threlte 実装はこのリポジトリに存在しない）。**新しい
+ビューア実装を書くときは、このリポジトリ内 `CLAUDE.md` の Threlte 記述を
+根拠にしない。** superproject 側が勝つ。詳細は
+`docs/adr/0001-what-this-repo-is-authoritative-for.md`。
 
 ## 使いはじめる
 
@@ -88,7 +95,7 @@ cd kotoba && npm install && npm test     # 4 tests, 1 file
 |---|---|
 | `kotoba-lang/kami-app-cad` | 幾何とレンダの**実装**（Rust → wasm）。このリポジトリはその成果物を静的に配るだけ |
 | `cad-job`（CF Container） | STEP/IGES のパースとテセレーション。重い処理はすべてあちら。ここには入れない |
-| `kotoba-lang/svelte-design-system` | `@etzhayyim/design-system` の実体。UI 部品はあちらが所有する |
+| `kotoba-lang/jp-go-digital-design-system` | `cljs/` scaffold が使う UI 部品・トークンの実体（デジタル庁デザインシステム） |
 
 ## ライセンス
 

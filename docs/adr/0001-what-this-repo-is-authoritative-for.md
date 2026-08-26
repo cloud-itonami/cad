@@ -1,7 +1,8 @@
 # ADR 0001 — cad が正本として持つもの、持たないもの
 
 - **Status**: accepted
-- **Date**: 2026-08-12
+- **Date**: 2026-08-12（2026-08-26 に Decision 3〜5 と Open question 1 を、
+  Svelte → ClojureScript 移行の実施を受けて更新）
 - **Scope**: `cloud-itonami/cad`（west name `cloud-itonami-cad`）
 
 ## Context
@@ -17,9 +18,10 @@
 | 面 | 実測 |
 |---|---|
 | `kotoba/` | `npm install` → `npm test` が通る（4 tests / 1 file）。`tsc --noEmit` も exit 0 |
-| `appview/.../svelte/` | `npm install` が `EUNSUPPORTEDPROTOCOL` で落ちる（`"@etzhayyim/design-system": "workspace:*"` を解決できない）。`App.svelte` は 32 行のスキャフォールド |
-| `appview/.../src/app.ts` | `appview/` 直下に `package.json` も `wrangler.toml` も無く、ビルド対象が定義されていない |
-| `appview/.../svelte/static/v2*` | wasm がチェックイン済みで、静的配信すれば 3 資産とも解決する。ただし**ソースもビルドレシピもこのリポジトリに無い** |
+| ~~`appview/.../svelte/`~~ | **2026-08-26 に削除。** `npm install` が `EUNSUPPORTEDPROTOCOL` で落ちていた（`"@etzhayyim/design-system": "workspace:*"` を解決できない）。`App.svelte` は 32 行のスキャフォールドで、以下の欄が後継 |
+| `appview/.../cljs/` | shadow-cljs + reagent + re-frame + jp-go-dds。旧 `App.svelte` の忠実な移植（見出し 1 行 + 状態文 1 行）。`npm install` → `npx shadow-cljs compile app` / `compile test && node out/tests.js` が通る（実測は `docs/operator-quickstart.md` §3） |
+| `appview/.../src/app.ts` | `appview/` 直下に `package.json` も `wrangler.toml` も無く、ビルド対象が定義されていない（backend、今回の移行の対象外） |
+| `appview/.../static/v2*` | wasm がチェックイン済みで、静的配信すれば 3 資産とも解決する。ただし**ソースもビルドレシピもこのリポジトリに無い**。2026-08-26 に `svelte/static/` から `appview/.../static/` へ移設（Svelte 削除に巻き込まれないよう退避。中身は無変更） |
 
 さらに、リポジトリ内 `CLAUDE.md` が「CAD viewer の標準実装は Svelte + Threlte」と
 書いているが、**superproject の repo-wide 規則（2026-07-10、設計書より 4 か月後）は
@@ -39,7 +41,9 @@ Three.js の Svelte ラッパなので、この 2 つは正面から衝突して
 
 3. **レンダリング実装も所有しない。** `static/v2/kami_app_cad*` は
    `kotoba-lang/kami-app-cad` の**成果物**であって、このリポジトリのソースではない。
-   ビューアを変更したい場合の行き先は上流であり、ここではない。
+   ビューアを変更したい場合の行き先は上流であり、ここではない。（2026-08-26: この
+   成果物は Svelte 削除に伴い `svelte/static/` から `appview/.../static/` へ
+   移設したが、所有権の帰属は変わっていない。）
 
 4. **3D については superproject の規則が勝つ。** リポジトリ内 `CLAUDE.md` の
    Threlte 記述を、新しいビューア実装の根拠にしない。superproject の
@@ -48,10 +52,12 @@ Three.js の Svelte ラッパなので、この 2 つは正面から衝突して
    Threlte ではなく kami-app-cad の wasm）ので、**壊すのは新しい Threlte 実装を
    足したときだけ**である。足したくなったら、先に例外 ADR を superproject に起票する。
 
-5. **`appview/` は「切り出しの残骸」として明示し、動くふりをさせない。**
-   README と operator quickstart の両方に、ビルドできないこととその理由を書く。
-   黙って放置すると、次に来た者が「UI があるのに壊れている」と読んで修理を始める ——
-   実際には修理して得られる UI が無い（32 行のスキャフォールド）。
+5. **`appview/` のうち Worker（`src/app.ts`）は「切り出しの残骸」のまま明示し、
+   動くふりをさせない。** README と operator quickstart の両方に、ビルドできない
+   ことと理由を書く。フロントエンド面（旧 `svelte/`、2026-08-26 以降 `cljs/`）は
+   ワークスペース標準スタックへ移行済みで実際にビルド・テストが通るが、機能は
+   増えていない（見出し 1 行 + 状態文 1 行の scaffold のまま）——「ビルドが通る」を
+   「UI が実装された」と読み違えないこと。
 
 ## Consequences
 
@@ -64,12 +70,14 @@ Three.js の Svelte ラッパなので、この 2 つは正面から衝突して
 
 ## Open questions（解いていない。次に触る者へ）
 
-1. **`svelte/` の `workspace:*` をどう解くか。** 選択肢は (a) npm/pnpm workspace を
-   このリポジトリに張る (b) `kotoba-lang/svelte-design-system` への git 依存に
-   書き換える (c) `svelte/` ごと削除して `static/v2` だけ残す。
-   **32 行のスキャフォールドを生かすためだけなら (c) が正直**だが、Phase 2 以降の
-   UI をここに置く計画があるなら (a)/(b) になる。設計書のフェーズ計画と突き合わせて
-   決めること。
+1. ~~**`svelte/` の `workspace:*` をどう解くか。**~~ **2026-08-26 に解決**。
+   選んだのは、当時挙げた (a)/(b)/(c) のいずれでもなく **(d) `svelte/` を削除し、
+   `static/v2` を退避した上で、ワークスペース標準（jp-go-dds + reagent +
+   re-frame + shadow-cljs）の `cljs/` scaffold に置き換える**——superproject
+   CLAUDE.md の「UI は jp-go-dds を基盤にする」（2026-08-05）が (a)/(b) を選んだ
+   時点より後に確立しており、`@etzhayyim/design-system` への依存を解くより
+   標準スタックに揃えるほうが workspace 全体の一貫性に合う。Phase 2 以降の実 UI
+   実装がここに乗る場合、土台は `cljs/`（`src/cad/app.cljs`）になる。
 2. **`README.edn` の `:name` が `com-etzhayyim-app-cad` のまま**（切り出し前の名前）。
    現在の identity は `cloud-itonami/cad`。直すべきだが、`README.edn` を読んでいる
    下流（`etzhayyim.repository/v1` スキーマの消費者）が居るかを確かめてから触ること。
