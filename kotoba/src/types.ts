@@ -233,3 +233,123 @@ export function commentDidFor(id: string): string {
 export function commentRkey(id: string): string {
   return `comment-${id.toLowerCase()}`;
 }
+
+// ─── Production release (manufacturing gate) ────────────────────────
+//
+// Manufacturing decision contract: a design revision may enter a
+// manufacturing cell (die machining, cartridge integration, reactor
+// fabrication, PEM stack assembly, system EOL) only through a release record
+// issued by a human approver. The gate is a decision over recorded facts; the
+// release record is the audit artifact MES traceability points at. No
+// equipment command, procurement, sale, payment, or regulatory commitment is
+// authorized by this record.
+
+export const PRODUCTION_RELEASE_COLLECTION = "com.etzhayyim.apps.cad.production-release";
+
+export type ProductionReleaseCell =
+  | "die-machining"
+  | "cartridge-integration"
+  | "reactor-fabrication"
+  | "pem-stack-assembly"
+  | "system-eol"
+  | "electronics-smt-and-test"
+  | "other";
+
+export type ProductionReleaseStatus = "released" | "superseded";
+
+export interface ProductionReleaseRecord {
+  did: string;
+  releaseId: string;
+  /** FK → revision revisionId. */
+  revisionId: string;
+  /** Denormalized from the revision at release time (audit snapshot). */
+  modelId: string;
+  revisionVersion: number;
+  representationCid: string;
+  releasedFor: ProductionReleaseCell;
+  /** MES lot / job reference the release is bound to. */
+  mesLotRef: string;
+  requestedByDid: string;
+  /** Human approver (never a cad-controller-namespace bot/actor DID). */
+  approverDid: string;
+  /** Required for hazardous cells (molten Mg, H2, HV, rotating equipment). */
+  safetySignoffDid?: string;
+  /** Prior release this one replaces (validated to exist and be same-model). */
+  supersedesReleaseId?: string;
+  note?: string;
+  status: ProductionReleaseStatus;
+  createdAt: string;
+  supersededByReleaseId?: string;
+  supersededAt?: string;
+  supersededByDid?: string;
+}
+export interface ProductionReleaseView extends ProductionReleaseRecord {
+  releaseUri: string;
+}
+
+export interface RequestProductionReleaseInput {
+  releaseId: string;
+  revisionId: string;
+  releasedFor: ProductionReleaseCell;
+  mesLotRef: string;
+  requestedByDid: string;
+  approverDid: string;
+  safetySignoffDid?: string;
+  supersedesReleaseId?: string;
+  note?: string;
+}
+export interface RequestProductionReleaseOutput {
+  status: "released" | "blocked" | "alreadyReleased" | "rejected";
+  releaseUri?: string;
+  did?: string;
+  releaseId?: string;
+  /** Gate reasons when blocked (never invented values — refs and counts only). */
+  reasons?: string[];
+  error?: string;
+}
+
+export interface GetProductionReleaseInput {
+  releaseId: string;
+}
+export interface GetProductionReleaseOutput {
+  release?: ProductionReleaseView;
+  error?: string;
+}
+
+export interface ListProductionReleasesInput {
+  revisionId?: string;
+  modelId?: string;
+  releasedFor?: ProductionReleaseCell;
+  limit?: number;
+  cursor?: string;
+}
+export interface ListProductionReleasesOutput {
+  items: ProductionReleaseView[];
+  cursor?: string;
+  total: number;
+}
+
+export interface ResolveProductionReleaseInput {
+  releaseId: string;
+  supersededByReleaseId: string;
+  byDid: string;
+}
+export interface ResolveProductionReleaseOutput {
+  status: "superseded" | "rejected";
+  releaseId?: string;
+  supersededByReleaseId?: string;
+  error?: string;
+}
+
+export function productionReleaseDidFor(id: string): string {
+  return `${CAD_DID_PREFIX}production-release:${id.toLowerCase()}`;
+}
+export function productionReleaseRkey(id: string): string {
+  return `production-release-${id.toLowerCase()}`;
+}
+
+/** AT PDS read page row shape used by the registry helpers. */
+export interface EtzhayyimRecord<T> {
+  uri: string;
+  value: T;
+}

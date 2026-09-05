@@ -25,3 +25,11 @@ export {
   listComments,
   coverage,
 } from "./registry.js";
+export {
+  requestProductionRelease,
+  getProductionRelease,
+  listProductionReleases,
+  resolveProductionRelease,
+  HAZARDOUS_CELLS,
+  PRODUCTION_RELEASE_CELLS,
+} from "./production.js";
