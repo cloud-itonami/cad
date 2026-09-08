@@ -28,8 +28,10 @@
 import type { Etzhayyim } from "@etzhayyim/sdk";
 import {
   COMMENT_COLLECTION,
+  MATERIAL_DESIGNATION_COLLECTION,
   PRODUCTION_RELEASE_COLLECTION,
   looksLikeCid,
+  materialDesignationRkey,
   productionReleaseDidFor,
   productionReleaseRkey,
   revisionRkey,
@@ -151,6 +153,18 @@ const revision = await readRecord<RevisionLike>(
     }
   }
 
+  let materialDesignationId: string | undefined;
+  if (input.materialDesignationId) {
+    const mat = await readRecord<MaterialDesignationRecordLike>(e, MATERIAL_DESIGNATION_COLLECTION, materialDesignationRkey(input.materialDesignationId));
+    if (!mat?.value) {
+      reasons.push("materialDesignationNotFound");
+    } else if (revision?.value && mat.value.modelId !== revision.value.modelId) {
+      reasons.push("materialDesignationDifferentModel");
+    } else {
+      materialDesignationId = input.materialDesignationId;
+    }
+  }
+
   if (reasons.length > 0) {
     return { status: "blocked", reasons };
   }
@@ -179,6 +193,7 @@ const revision = await readRecord<RevisionLike>(
     mesLotRef: input.mesLotRef,
     requestedByDid: input.requestedByDid,
     approverDid: input.approverDid!,
+    materialDesignationId,
     safetySignoffDid: input.safetySignoffDid,
     supersedesReleaseId: input.supersedesReleaseId,
     note: input.note,
@@ -207,6 +222,15 @@ interface CommentRecordLike {
   modelId: string;
   revisionId?: string;
   status: "open" | "resolved";
+}
+
+interface MaterialDesignationRecordLike {
+  designationId: string;
+  modelId: string;
+  designation: string;
+  unitsRegime: string;
+  sourceUrl: string;
+  authorDid: string;
 }
 
 export async function getProductionRelease(e: Etzhayyim, input: GetProductionReleaseInput): Promise<GetProductionReleaseOutput> {

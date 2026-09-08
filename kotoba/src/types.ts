@@ -272,6 +272,8 @@ export interface ProductionReleaseRecord {
   requestedByDid: string;
   /** Human approver (never a cad-controller-namespace bot/actor DID). */
   approverDid: string;
+  /** Optional material provenance carried from the material-designation registry. */
+  materialDesignationId?: string;
   /** Required for hazardous cells (molten Mg, H2, HV, rotating equipment). */
   safetySignoffDid?: string;
   /** Prior release this one replaces (validated to exist and be same-model). */
@@ -294,6 +296,7 @@ export interface RequestProductionReleaseInput {
   mesLotRef: string;
   requestedByDid: string;
   approverDid: string;
+  materialDesignationId?: string;
   safetySignoffDid?: string;
   supersedesReleaseId?: string;
   note?: string;
@@ -352,4 +355,99 @@ export function productionReleaseRkey(id: string): string {
 export interface EtzhayyimRecord<T> {
   uri: string;
   value: T;
+}
+
+// ─── Material & units designation (manufacturing material provenance) ────
+//
+// A design revision is authored for a recorded material designation and a
+// units regime. Before the production-release gate sends a revision into a
+// manufacturing cell, it must carry transportable material provenance so MES
+// traceability and the consuming cell know what material the geometry is
+// dimensioned for. This record is a DECISION over recorded facts — it records
+// the designation and a human-supplied source, it does not invent any material
+// constant (density, yield, rating, certification) — those values stay
+// unmeasured until a direct manufacturer/dealer source records them.
+//
+// activity : a human author designates the material + units regime for a model
+// decision : FK -> model present | designation non-empty | units regime in the
+//            allowed set | source URL present and https | author is a human
+//            (never a cad-controller bot/actor DID)
+// effect   : AT PDS material-designation record (audit artifact)
+// audit    : designation, units regime, source URL, author, model FK,
+//            timestamps — every designation is one immutable record
+//
+// Hazard boundary: no equipment command, procurement, sale, payment, or
+// regulatory commitment is authorized here. No material constant is asserted.
+
+export const MATERIAL_DESIGNATION_COLLECTION = "com.etzhayyim.apps.cad.material-designation";
+
+export type UnitsRegime = "metric-si" | "imperial";
+export type MaterialRecordKind = "alloy-designation" | "generically-magnesium" | "composite" | "polymer" | "other";
+
+export const UNITS_REGIMES: ReadonlySet<string> = new Set(["metric-si", "imperial"]);
+
+export interface MaterialDesignationRecord {
+  did: string;
+  designationId: string;
+  /** FK to the model whose geometry this designation applies to. */
+  modelId: string;
+  /** Human-recorded material designation (e.g. a registered alloy code). */
+  designation: string;
+  kind: MaterialRecordKind;
+  unitsRegime: UnitsRegime;
+  /** Human-supplied source (manufacturer / standards / owner document) URL. */
+  sourceUrl: string;
+  /** Human author — never a cad-controller-namespace bot/actor DID. */
+  authorDid: string;
+  createdAt: string;
+}
+export interface MaterialDesignationView extends MaterialDesignationRecord {
+  designationUri: string;
+}
+
+export interface RegisterMaterialDesignationInput {
+  designationId: string;
+  modelId: string;
+  designation: string;
+  kind: MaterialRecordKind;
+  unitsRegime: UnitsRegime;
+  sourceUrl: string;
+  authorDid: string;
+}
+export interface RegisterMaterialDesignationOutput {
+  status: "registered" | "alreadyExists" | "rejected" | "modelNotFound";
+  designationUri?: string;
+  did?: string;
+  designationId?: string;
+  error?: string;
+}
+
+export interface GetMaterialDesignationInput {
+  designationId: string;
+}
+export interface GetMaterialDesignationOutput {
+  designation?: MaterialDesignationView;
+  error?: string;
+}
+
+export interface ListMaterialDesignationsInput {
+  modelId?: string;
+  kind?: MaterialRecordKind;
+  limit?: number;
+  cursor?: string;
+}
+export interface ListMaterialDesignationsOutput {
+  items: MaterialDesignationView[];
+  cursor?: string;
+  total: number;
+}
+
+export function materialDesignationDidFor(id: string): string {
+  return `${CAD_DID_PREFIX}material-designation:${id.toLowerCase()}`;
+}
+export function materialDesignationRkey(id: string): string {
+  return `material-designation-${id.toLowerCase()}`;
+}
+export function looksLikeHttpUrl(s: string): boolean {
+  return /^https?:\/\/\S+$/i.test(s);
 }

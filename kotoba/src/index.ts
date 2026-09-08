@@ -33,3 +33,8 @@ export {
   HAZARDOUS_CELLS,
   PRODUCTION_RELEASE_CELLS,
 } from "./production.js";
+export {
+  registerMaterialDesignation,
+  getMaterialDesignation,
+  listMaterialDesignations,
+} from "./materials.js";
