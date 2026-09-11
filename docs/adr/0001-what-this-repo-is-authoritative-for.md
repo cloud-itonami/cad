@@ -19,7 +19,7 @@
 |---|---|
 | `kotoba/` | `npm install` → `npm test` が通る（4 tests / 1 file）。`tsc --noEmit` も exit 0 |
 | ~~`appview/.../svelte/`~~ | **2026-08-26 に削除。** `npm install` が `EUNSUPPORTEDPROTOCOL` で落ちていた（`"@etzhayyim/design-system": "workspace:*"` を解決できない）。`App.svelte` は 32 行のスキャフォールドで、以下の欄が後継 |
-| `appview/.../cljs/` | shadow-cljs + reagent + re-frame + jp-go-dds。旧 `App.svelte` の忠実な移植（見出し 1 行 + 状態文 1 行）。`npm install` → `npx shadow-cljs compile app` / `compile test && node out/tests.js` が通る（実測は `docs/operator-quickstart.md` §3） |
+| `appview/.../cljs/` | shadow-cljs + reagent + re-frame + jp-go-dds。旧 `App.svelte` の忠実な移植（見出し 1 行 + 状態文 1 行）。`npm install` → `amu compile --target wasm32-browser app` / `compile test && node out/tests.js` が通る（実測は `docs/operator-quickstart.md` §3） |
 | `appview/.../src/app.ts` | `appview/` 直下に `package.json` も `wrangler.toml` も無く、ビルド対象が定義されていない（backend、今回の移行の対象外） |
 | `appview/.../static/v2*` | wasm がチェックイン済みで、静的配信すれば 3 資産とも解決する。ただし**ソースもビルドレシピもこのリポジトリに無い**。2026-08-26 に `svelte/static/` から `appview/.../static/` へ移設（Svelte 削除に巻き込まれないよう退避。中身は無変更） |
 

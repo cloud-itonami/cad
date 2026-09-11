@@ -151,7 +151,7 @@ npm install
 ### build
 
 ```bash
-npx shadow-cljs compile app
+amu compile --target wasm32-browser app
 ```
 
 **実測**: `[:app] Build completed. (111 files, 110 compiled, 0 warnings, 25.12s)`
@@ -161,7 +161,7 @@ SSR 生成した shell で、`js/app.js` を相対パスで読む）。
 ### test
 
 ```bash
-npx shadow-cljs compile test
+amu compile --target wasm32-browser test
 node out/tests.js
 ```
 
