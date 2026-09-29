@@ -63,10 +63,10 @@ Phase 1 のレジストリ部分**である。
 
 ## 3D の権威 — Threlte はこのリポジトリの独断では使えない
 
-`CLAUDE.md`（リポジトリ内、2026-03 の設計時点）は「CAD viewer の標準実装は Svelte +
+`AGENTS.md`（リポジトリ内、2026-03 の設計時点）は「CAD viewer の標準実装は Svelte +
 Threlte」と書いている。**これは superproject の repo-wide 規則と衝突している。**
 
-superproject の `CLAUDE.md`「3D はすべて kami-engine を使う」（2026-07-10、設計書より後）は、
+superproject の `AGENTS.md`「3D はすべて kami-engine を使う」（2026-07-10、設計書より後）は、
 用途を問わず canonical な kami-engine stack を使うことを求め、**Three.js / Babylon.js 等を
 app ごとの第 2 エンジンとして導入することを名指しで禁じている**（Threlte は Three.js の
 Svelte ラッパ）。例外には対象・期間・理由・撤去条件を書いた accepted ADR が要るが、
@@ -75,7 +75,7 @@ Svelte ラッパ）。例外には対象・期間・理由・撤去条件を書�
 現状は偶然そちら側に揃っている —— 実際に動くビューアは Threlte ではなく
 `kami-app-cad` の wasm だからである（2026-08-26 の cljs 移行で `svelte/` 自体が
 消えたので、なおさら Threlte 実装はこのリポジトリに存在しない）。**新しい
-ビューア実装を書くときは、このリポジトリ内 `CLAUDE.md` の Threlte 記述を
+ビューア実装を書くときは、このリポジトリ内 `AGENTS.md` の Threlte 記述を
 根拠にしない。** superproject 側が勝つ。詳細は
 `docs/adr/0001-what-this-repo-is-authoritative-for.md`。
 
