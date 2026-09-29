@@ -10,7 +10,7 @@
 このリポジトリは `etzhayyim/root` の `60-apps/etzhayyim-project-cad` から
 26 ファイル・336 KB として切り出された（`migration.edn`）。切り出しは成功しているが、
 **切り出された結果が何であるかを述べる文書が無かった** —— 入口は
-`README.edn`（1 行のメタデータ）と `CLAUDE.md`（2026-03 の設計時点の指示）だけで、
+`README.edn`（1 行のメタデータ）と `AGENTS.md`（2026-03 の設計時点の指示）だけで、
 どちらも「今このリポジトリで何が動くか」を答えない。
 
 実測すると、リポジトリの中身は 2 つの面に分かれていて、**動く度合いが大きく違う**:
@@ -23,7 +23,7 @@
 | `appview/.../src/app.ts` | `appview/` 直下に `package.json` も `wrangler.toml` も無く、ビルド対象が定義されていない（backend、今回の移行の対象外） |
 | `appview/.../static/v2*` | wasm がチェックイン済みで、静的配信すれば 3 資産とも解決する。ただし**ソースもビルドレシピもこのリポジトリに無い**。2026-08-26 に `svelte/static/` から `appview/.../static/` へ移設（Svelte 削除に巻き込まれないよう退避。中身は無変更） |
 
-さらに、リポジトリ内 `CLAUDE.md` が「CAD viewer の標準実装は Svelte + Threlte」と
+さらに、リポジトリ内 `AGENTS.md` が「CAD viewer の標準実装は Svelte + Threlte」と
 書いているが、**superproject の repo-wide 規則（2026-07-10、設計書より 4 か月後）は
 Three.js 系を app ごとの第 2 エンジンとして導入することを禁じている**。Threlte は
 Three.js の Svelte ラッパなので、この 2 つは正面から衝突している。
@@ -45,7 +45,7 @@ Three.js の Svelte ラッパなので、この 2 つは正面から衝突して
    成果物は Svelte 削除に伴い `svelte/static/` から `appview/.../static/` へ
    移設したが、所有権の帰属は変わっていない。）
 
-4. **3D については superproject の規則が勝つ。** リポジトリ内 `CLAUDE.md` の
+4. **3D については superproject の規則が勝つ。** リポジトリ内 `AGENTS.md` の
    Threlte 記述を、新しいビューア実装の根拠にしない。superproject の
    「3D はすべて kami-engine を使う」に対する例外 ADR はこのリポジトリに存在せず、
    本 ADR もそれを発行しない。現状は偶然規則側に揃っている（実際に動くビューアは
@@ -74,7 +74,7 @@ Three.js の Svelte ラッパなので、この 2 つは正面から衝突して
    選んだのは、当時挙げた (a)/(b)/(c) のいずれでもなく **(d) `svelte/` を削除し、
    `static/v2` を退避した上で、ワークスペース標準（jp-go-dds + reagent +
    re-frame + shadow-cljs）の `cljs/` scaffold に置き換える**——superproject
-   CLAUDE.md の「UI は jp-go-dds を基盤にする」（2026-08-05）が (a)/(b) を選んだ
+   AGENTS.md の「UI は jp-go-dds を基盤にする」（2026-08-05）が (a)/(b) を選んだ
    時点より後に確立しており、`@etzhayyim/design-system` への依存を解くより
    標準スタックに揃えるほうが workspace 全体の一貫性に合う。Phase 2 以降の実 UI
    実装がここに乗る場合、土台は `cljs/`（`src/cad/app.cljs`）になる。
